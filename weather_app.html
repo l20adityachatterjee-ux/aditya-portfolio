@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0f172a;
+            color: white;
+        }
+
+        .weather-card {
+            width: 350px;
+            padding: 30px;
+            text-align: center;
+            background: #1e293b;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #38bdf8;
+            color: #082f49;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #7dd3fc;
+        }
+
+        #weather {
+            margin-top: 25px;
+        }
+
+        .temperature {
+            font-size: 50px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .condition {
+            font-size: 20px;
+            color: #cbd5e1;
+        }
+
+        .error {
+            color: #f87171;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="weather-card">
+
+        <h1>🌤️ Weather App</h1>
+
+        <input
+            type="text"
+            id="city"
+            placeholder="Enter city name"
+        >
+
+        <button onclick="getWeather()">
+            Get Weather
+        </button>
+
+        <div id="weather"></div>
+
+    </div>
+
+
+    <script>
+
+        async function getWeather() {
+
+            const city = document.getElementById("city").value.trim();
+            const weatherDiv = document.getElementById("weather");
+
+            if (city === "") {
+                weatherDiv.innerHTML =
+                    "<p class='error'>Please enter a city name.</p>";
+                return;
+            }
+
+            weatherDiv.innerHTML = "<p>Loading...</p>";
+
+            try {
+
+                // Find city coordinates
+                const geoResponse = await fetch(
+                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
+                );
+
+                const geoData = await geoResponse.json();
+
+                if (!geoData.results) {
+                    throw new Error("City not found");
+                }
+
+                const latitude = geoData.results[0].latitude;
+                const longitude = geoData.results[0].longitude;
+                const cityName = geoData.results[0].name;
+
+                // Fetch weather
+                const weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
+                );
+
+                const weatherData = await weatherResponse.json();
+
+                const temperature =
+                    weatherData.current.temperature_2m;
+
+                const weatherCode =
+                    weatherData.current.weather_code;
+
+                const condition =
+                    getWeatherCondition(weatherCode);
+
+                weatherDiv.innerHTML = `
+                    <h2>${cityName}</h2>
+
+                    <div class="temperature">
+                        ${temperature}°C
+                    </div>
+
+                    <div class="condition">
+                        ${condition}
+                    </div>
+                `;
+
+            } catch (error) {
+
+                weatherDiv.innerHTML =
+                    "<p class='error'>Unable to find weather. Try another city.</p>";
+
+            }
+        }
+
+
+        function getWeatherCondition(code) {
+
+            if (code === 0) {
+                return "☀️ Clear Sky";
+            }
+
+            if (code >= 1 && code <= 3) {
+                return "🌤️ Partly Cloudy";
+            }
+
+            if (code >= 45 && code <= 48) {
+                return "🌫️ Foggy";
+            }
+
+            if (code >= 51 && code <= 67) {
+                return "🌧️ Rainy";
+            }
+
+            if (code >= 71 && code <= 77) {
+                return "❄️ Snowy";
+            }
+
+            if (code >= 80 && code <= 82) {
+                return "🌦️ Rain Showers";
+            }
+
+            if (code >= 95) {
+                return "⛈️ Thunderstorm";
+            }
+
+            return "🌥️ Unknown";
+        }
+
+    </script>
+
+</body>
+</html>
